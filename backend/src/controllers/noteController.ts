@@ -1,9 +1,11 @@
 import Note, { INote, INoteFile } from "../models/noteModel";
 import User from "../models/userModel";
 import deleteFiles from "../utils/deleteFiles";
-import fs from "fs";
+import { endOfDay, startOfDay } from "date-fns";
 import cleanFiles from "../utils/cleanFiles";
 import { RequestHandler } from "express";
+import mongoose from "mongoose";
+
 
 //filter regex
 //https://attacomsian.com/blog/mongoose-like-regex
@@ -11,9 +13,6 @@ import { RequestHandler } from "express";
 //https://dev.to/itz_giddy/how-to-query-documents-in-mongodb-that-fall-within-a-specified-date-range-using-mongoose-and-node-524a
 //https://stackoverflow.com/questions/11973304/mongodb-mongoose-querying-at-a-specific-date
 
-// @desc Get all notes
-// @route GET api/notes
-// @access Private
 interface SearchQuery {
   page: string;
   size: string;
@@ -21,6 +20,14 @@ interface SearchQuery {
   fromDate: string;
   search: string;
 }
+
+/**
+ * @desc - Get all notes
+ * @route - GET api/notes
+ * @access - Private
+ *
+ */
+
 const getAllNotes: RequestHandler<
   unknown,
   unknown,
@@ -29,6 +36,11 @@ const getAllNotes: RequestHandler<
 > = async (req, res) => {
   // Get all notes from MongoDB
 
+  interface User {
+    _id: mongoose.Types.ObjectId;
+  }
+
+  const { _id: id } = req.user as User;
   /**----------------------------------
          * PAGINATION
   ------------------------------------*/
@@ -36,65 +48,54 @@ const getAllNotes: RequestHandler<
   //query string payload
   const page = parseInt(req.query.page) || 1; //current page no. / sent as string convert to number//page not sent use 1
   const size = parseInt(req.query.size) || 15; //items per page//if not sent from FE/ use default 15
-  const toDate = req.query.toDate;
-  const fromDate = req.query.fromDate;
-  const search = req.query.search;
-
+  const { fromDate, toDate } = req.query;
+  const searchTerm = req.query.search;
   const skip = (page - 1) * size; //eg page = 5, it has already displayed 4 * 10//so skip prev items
 
-  /**---------------------------
-   * Filter/search& date filter
-   -----------------------------*/
-  //title like %_keyword%  & case insensitive//
-  const searchQuery = {
-    title: { $regex: `.*${search}.*`, $options: "i" },
-  };
-  const sQuery = search ? searchQuery : {};
-  //range range query
-  let dateQuery = {}; //for !fromDate && !toDate//TS will infer dateQuery as Object type for $and
+  //date range
+  //if from fromDate:true, fetch all records not older than fromDate || no lower limit i.e not older than midnight of January 1, 1970
+  const startDate = fromDate
+    ? startOfDay(new Date(fromDate))
+    : new Date(Date.now());
+  // if toDate:true, fetch all records older than toDate || no upper limit i.e current date
+  const endDate = toDate
+    ? endOfDay(new Date(toDate))
+    : new Date();
+  //format with date-fns or use: new Date(new Date(fromDate).setHours(0o0, 0o0, 0o0)), //start searching from the very beginning of our start date eg //=> Tue Sep 02 2014 00:00:00
+  //new Date(new Date(toDate).setHours(23, 59, 59)), //up to but not beyond the last minute of our endDate /eg Tue Sep 02 2014 23:59:59.999
+  //or use date-fns to add start of day & end of day
 
-  if (fromDate && !toDate)
-    dateQuery = {
-      updatedAt: {
-        $gte: new Date(new Date(fromDate).setHours(0o0, 0o0, 0o0)), //start searching from the very beginning of our start date
-        //$lte: new Date(new Date(toDate).setHours(23, 59, 59)), //up to but not beyond the last minute of our endDate
+  let query = Note.find({
+    $and: [
+      { user: id },
+      { title: { $regex: `.*${searchTerm}.*`, $options: "i" } }, //like %_keyword%  & case insensitive//
+      {
+        updatedAt: {
+          $gte: startDate, //start searching from the very beginning of our start date
+          $lte: endDate, //up to but not beyond the last minute of our endDate
+        },
       },
-    };
-  if (!fromDate && toDate)
-    dateQuery = {
-      updatedAt: {
-        //$gte: new Date(new Date(fromDate).setHours(00, 00, 00)), //start searching from the very beginning of our start date
-        $lte: new Date(new Date(toDate).setHours(23, 59, 59)), //up to but not beyond the last minute of our endDate
-      },
-    };
-  if (fromDate && toDate)
-    dateQuery = {
-      updatedAt: {
-        $gte: new Date(new Date(fromDate).setHours(0o0, 0o0, 0o0)), //start searching from the very beginning of our start date
-        $lte: new Date(new Date(toDate).setHours(23, 59, 59)), //up to but not beyond the last minute of our endDate
-      },
-    };
+    ],
+  });
 
-  /**---------------------------
-   * End of Filter/search& date filter
-   -----------------------------*/
-  const total = await Note.find({ $and: [sQuery, dateQuery] }).count(); //Task.countDocument() ///total docs
+  const total = await query.count(); //Task.countDocument() ///total docs
   //if total = 0 //error
   if (!total) {
     return res.status(400).json({ message: "No notes found" });
   }
+
   const pages = Math.ceil(total / size);
-
-  let query = Note.find({ $and: [sQuery, dateQuery] }).lean();
-
-  query = query.skip(skip).limit(size); //you can use projection,  .find({}, {limit, skip})
 
   //in case invalid page is sent//out of range//not from the pages sent
   if (page > pages) {
     return res.status(400).json({ message: "Page not found" });
   }
 
-  const result = await query;
+  const result = await query
+    .skip(skip)
+    .limit(size)
+    .sort({ updatedAt: -1 }) //desc//recent first
+    .lean();
 
   res.status(200).json({
     pages,
@@ -102,9 +103,12 @@ const getAllNotes: RequestHandler<
   });
 };
 
-// @desc Get all notes
-// @route GET api/notes/:id
-// @access Private
+/**
+ * @desc - Get note
+ * @route - GET api/notes/:id
+ * @access - Private
+ *
+ */
 const getNoteById: RequestHandler = async (req, res) => {
   // Get single note
   const { noteId } = req.params;
@@ -125,14 +129,19 @@ const getNoteById: RequestHandler = async (req, res) => {
   });
 };
 
-// @desc Create new note
-// @route POST api/notes
-// @access Private
 interface CreateNoteBody {
   title?: string;
   content?: string;
   deadline?: Date;
 }
+
+/**
+ * @desc - Create new note
+ * @route - POST api/notes
+ * @access - Private
+ *
+ */
+
 const createNewNote: RequestHandler<
   unknown,
   unknown,
@@ -170,9 +179,6 @@ const createNewNote: RequestHandler<
   return res.status(201).json({ message: "New note created" }); //201 is default
 };
 
-// @desc Update a note
-// @route PATCH /notes/:id
-// @access Private
 interface UpdateNoteParams {
   noteId: string;
 }
@@ -182,6 +188,13 @@ interface UpdateNoteBody {
   content?: string;
   deadline?: Date;
 }
+
+/**
+ * @desc - Update a note
+ * @route - PATCH /notes/:id
+ * @access - Private
+ *
+ */
 const updateNote: RequestHandler<
   UpdateNoteParams,
   unknown,
@@ -242,9 +255,12 @@ const updateNote: RequestHandler<
   });
 };
 
-// @desc Delete a note
-// @route DELETE /notes/:id
-// @access Private
+/**
+ * @desc - Delete a note
+ * @route - DELETE /notes/:id
+ * @access - Private
+ *
+ */
 const deleteNote: RequestHandler = async (req, res) => {
   const { noteId } = req.params;
 

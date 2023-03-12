@@ -15,9 +15,13 @@ import mongoose from "mongoose";
 /*-----------------------------------------------------------
  * GET USER
  ------------------------------------------------------------*/
-// @desc Get user
-// @route GET /user
-// @access Private
+
+/**
+ * @desc - Get user
+ * @route - GET api/users
+ * @access - Private
+ *
+ */
 const getUser: RequestHandler = async (req, res) => {
   // Get current user details
   const { user } = req;
@@ -42,14 +46,18 @@ const getUser: RequestHandler = async (req, res) => {
  * REGISTER
  ------------------------------------------------------------*/
 
-// @desc  new user
-// @route POST /api/user/register
-// @access Public
 interface SignUpBody {
   username?: string;
   email?: string;
   password?: string;
 }
+
+/**
+ * @desc - Create new user
+ * @route - POST /api/users/register
+ * @access - Public
+ *
+ */
 
 const registerUser: RequestHandler<
   unknown,
@@ -104,12 +112,11 @@ const registerUser: RequestHandler<
                              
                 `,
   };
-
-  const response = sendEmail(emailOptions);
-
-  if (!response) {
-    return res.status(400).json({ message: "Check details and try again" });
-  }
+  //don't wait//they can resend if it fails
+  const response = await sendEmail(emailOptions);
+  // if (!response) {
+  //   return res.status(400).json({ message: "Check details and try again" });
+  // }
 
   ///save user
   const userObject = {
@@ -148,9 +155,13 @@ const registerUser: RequestHandler<
 /*-----------------------------------------------------------
  * RESEND EMAIL
  ------------------------------------------------------------*/
-// @desc resend email token
-// @route POST /user/resend/token
-// @access Public
+
+/**
+ * @desc - Resend email token
+ * @route - POST api/users/resend/email
+ * @access - Public
+ *
+ */
 const resendVerifyEmail: RequestHandler = async (req, res) => {
   const cookies = req.cookies;
 
@@ -199,12 +210,11 @@ const resendVerifyEmail: RequestHandler = async (req, res) => {
                              
                 `,
       };
-
+      //don't wait//they can resend if it fails
       const response = sendEmail(emailOptions);
-
-      if (!response) {
-        return res.status(400).json({ message: "Check details and try again" });
-      }
+      // if (!response) {
+      //   return res.status(400).json({ message: "Check details and try again" });
+      // }
 
       //update verify token
       foundUser.verifyEmailToken = verifyEmailToken;
@@ -220,9 +230,13 @@ const resendVerifyEmail: RequestHandler = async (req, res) => {
  ------------------------------------------------------------*/
 //ALLOW USERS TO CHANGE EMAIL BUT DON'T USE EMAIL AS UNIQUE IDENTIFY IN OTHER COLLECTION//USE user: object id //the can populate
 //so you will only need to update email in user collection only//id remains the same
-// @desc Update user
-// @route PATCH api/user/:id
-// @access Private
+
+/**
+ * @desc - Update user
+ * @route - PATCH api/users/:id
+ * @access - Private
+ *
+ */
 const updateUser: RequestHandler = async (req, res) => {
   const { username, email, phoneNumber, password, newPassword } = req.body;
 
@@ -261,7 +275,7 @@ const updateUser: RequestHandler = async (req, res) => {
   if (username) user.username = username;
   if (phoneNumber) user.phoneNumber = phoneNumber;
   //upload and store public id
-  if (profileUrl) user.profileUrl  = profileUrl;
+  if (profileUrl) user.profileUrl = profileUrl;
   //email changed
   if (email && user.email !== email) {
     //gen verify token & hash it
@@ -301,7 +315,8 @@ const updateUser: RequestHandler = async (req, res) => {
                              
                 `,
     };
-    const response = sendEmail(emailOptions);
+    //wait for fail or success//can't resend email
+    const response = await sendEmail(emailOptions);
     if (!response) {
       await removeImage(publicId);
       return res.status(400).json({
@@ -330,9 +345,12 @@ const updateUser: RequestHandler = async (req, res) => {
   });
 };
 
-// @desc Delete a user
-// @route DELETE /users
-// @access Private
+/**
+ * @desc - Delete a user
+ * @route - DELETE api/users/:id
+ * @access - Private
+ *
+ */
 const deleteUser: RequestHandler = async (req, res) => {
   const { id } = req.params;
 
@@ -340,9 +358,9 @@ const deleteUser: RequestHandler = async (req, res) => {
   // if (!id.match(/^[0-9a-fA-F]{24}$/)) {
   //   return res.status(400).json({ message: "User not found" });
   // }
-   if (!mongoose.isValidObjectId(id)) {
-     return res.status(400).json({ message: "User not found" });
-   }
+  if (!mongoose.isValidObjectId(id)) {
+    return res.status(400).json({ message: "User not found" });
+  }
 
   // Does the user exist to delete?
   const user = await User.findById(id).exec();

@@ -17,13 +17,16 @@ import mongoose from "mongoose";
 /*-----------------------------------------------------------
  * LOGIN
  ------------------------------------------------------------*/
-// @desc Login
-// @route POST /auth
-// @access Public
 interface LoginBody {
   email?: string;
   password?: string;
 }
+
+/**
+ * @desc - Login
+ * @route - POST /auth
+ * @access - Public
+ */
 
 const login: RequestHandler<unknown, unknown, LoginBody, unknown> = async (
   req,
@@ -84,10 +87,11 @@ const login: RequestHandler<unknown, unknown, LoginBody, unknown> = async (
 /*-------------------------------------------------------
  * SSO SUCCESSFUL
  --------------------------------------------------------*/
-
-// @desc single sign-on
-// @route POST /auth/sso
-// @access Public
+/**
+ * @desc - single sign-on
+ * @route - POST /auth/sso
+ * @access - Public
+ */
 
 const oauthSuccess: RequestHandler = (req, res) => {
   //only need this when using passport that defines type for req.user as User which empty
@@ -126,12 +130,16 @@ const oauthSuccess: RequestHandler = (req, res) => {
  * CONFIRM EMAIL
  ---------------------------------------------------------*/
 
-// @desc verify
-// @route GET /auth/verify/:verifyToken
-// @access Public
 interface VerifyEmailParams {
   verifyToken: string;
 }
+
+/**
+ * @desc - verify
+ * @route - GET /auth/verify/:verifyToken
+ * @access - Public
+ */
+
 const verifyEmail: RequestHandler<
   VerifyEmailParams,
   unknown,
@@ -158,7 +166,7 @@ const verifyEmail: RequestHandler<
 
   user.verified = true;
 
-  user.verifyEmailToken = ""; //invalidate token after successful verification
+  user.verifyEmailToken = null; //invalidate token after successful verification
 
   //if changing email
   if (user.newEmail) {
@@ -173,10 +181,12 @@ const verifyEmail: RequestHandler<
 /*--------------------------------------------------------
  * FORGOT PASSWORD
  ---------------------------------------------------------*/
+/**
+ * @desc - forgot password
+ * @route - POST api/auth/forgot
+ * @access - Public
+ */
 
-// @desc forgot password
-// @route POST api/auth/forgot
-// @access Public
 const forgotPassword: RequestHandler = async (req, res) => {
   const { email } = req.body;
 
@@ -198,9 +208,9 @@ const forgotPassword: RequestHandler = async (req, res) => {
     .update(resetToken)
     .digest("hex");
 
-  user.resetPasswordToken.token = resetPasswordToken;
+  user.resetPasswordToken!.token = resetPasswordToken;
 
-  user.resetPasswordToken.expiresIn = Date.now() + 24 * 60 * 60 * 1000; //expire in 24 hrs
+  user.resetPasswordToken!.expiresIn = Date.now() + 24 * 60 * 60 * 1000; //expire in 24 hrs
 
   //send email//then use match.params.resetToken to get the token
   const emailOptions = {
@@ -230,10 +240,12 @@ const forgotPassword: RequestHandler = async (req, res) => {
 /*--------------------------------------------------------
  * RESET PASSWORD
  ---------------------------------------------------------*/
+/**
+ * @desc - Reset
+ * @route - POST /auth/reset/:resetToken
+ * @access - Public
+ */
 
-// @desc Reset
-// @route POST /auth/reset/:resetToken
-// @access Public
 const resetPassword: RequestHandler = async (req, res) => {
   const { password } = req.body;
   const { resetToken } = req.params;
@@ -252,7 +264,7 @@ const resetPassword: RequestHandler = async (req, res) => {
     return res.status(400).json({ message: "Password could not be reset" });
   }
 
-  user.resetPasswordToken = {};
+  user.resetPasswordToken = null;
 
   user.password = await bcrypt.hash(password, 10);
 
@@ -266,9 +278,12 @@ const resetPassword: RequestHandler = async (req, res) => {
  * REFRESH TOKEN//GET NEW ACCESS TOKEN
  ---------------------------------------------------------*/
 
-// @desc Refresh
-// @route GET /auth/refresh
-// @access Public - because access token has expired
+/**
+ * @desc - Refresh
+ * @route - GET /auth/refresh
+ * @access - Public
+ */
+
 const refresh: RequestHandler = (req, res) => {
   const cookies = req.cookies;
 
@@ -306,9 +321,12 @@ const refresh: RequestHandler = (req, res) => {
  * LOGOUT//CLEAR REFRESH TOKEN COOKIE
  ---------------------------------------------------------*/
 
-// @desc Logout
-// @route POST api/auth/logout
-// @access Public - just to clear cookie if exists
+/**
+ * @desc - Logout
+ * @route - POST api/auth/logout
+ * @access - Public
+ * 
+ */
 const logout: RequestHandler = (req, res) => {
   const cookies = req.cookies;
   if (!cookies?.jwt) {

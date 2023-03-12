@@ -35,13 +35,19 @@ passport.use(
       const email = profile.emails?.[0]?.value;
 
       if (!email) {
-        return cb(
-          new Error(`Failed! Please choose a different way to sign in`)
-        );
+        //to trigger failure redirect, err arg must be null and no user arg supplied
+        //provide only one arg as null to trigger failure
+
+        return cb(null);
+        //below will not trigger failure redirect//it will just return the the error object in empty page
+        //it won't trigger success redirect since user arg is null too
+        // return cb(
+        //   new Error(`Failed! Please choose a different way to sign in`)
+        // );
       }
 
       User.findOne({ email }, (err: Error, user: IUser) => {
-        if (err) return cb(err);
+        if (err) return cb(null);
 
         if (!user) {
           const newUser = new User({
@@ -55,7 +61,7 @@ passport.use(
           return cb(null, newUser);
         } else if (!user.verified) {
           //user has account bt not verified//registered using form
-          return cb(err);
+          return cb(null);
         } else {
           return cb(null, user);
         }
@@ -80,13 +86,11 @@ passport.use(
       const email = profile.emails?.[0]?.value;
 
       if (!email) {
-        return cb(
-          new Error(`Failed! Please choose a different way to sign in`)
-        );
+         return cb(null);
       }
 
       User.findOne({ email }, (err: Error, user: IUser) => {
-        if (err) return cb(err);
+        if (err) return cb(null);
 
         if (!user) {
           const newUser = new User({
@@ -100,7 +104,7 @@ passport.use(
           return cb(null, newUser);
         } else if (!user.verified) {
           //user has account bt not verified//registered using form
-          return cb(err);
+          return cb(null);
         } else {
           return cb(null, user);
         }
@@ -126,12 +130,10 @@ passport.use(
       const email = profile?.emails && profile.emails[0]?.value;
 
       if (!email) {
-        return cb(
-          new Error(`Failed! Please choose a different way to sign in`)
-        );
+         return cb(null);
       }
       User.findOne({ email }, (err: Error, user: IUser) => {
-        if (err) return cb(err);
+        if (err) return cb(null);
 
         if (!user) {
           const newUser = new User({
@@ -145,7 +147,7 @@ passport.use(
           return cb(null, newUser);
         } else if (!user.verified) {
           //user has account bt not verified//registered using form
-          return cb(err);
+          return cb(null);
         } else {
           return cb(null, user);
         }
@@ -178,13 +180,11 @@ passport.use(
       const email = profile.emails?.[0]?.value;
 
       if (!email) {
-        return cb(
-          new Error(`Failed! Please choose a different way to sign in`)
-        );
+         return cb(null);
       }
 
       User.findOne({ email }, (err: Error, user: IUser) => {
-        if (err) return cb(err);
+        if (err) return cb(null);
 
         if (!user) {
           const newUser = new User({
@@ -198,7 +198,7 @@ passport.use(
           return cb(null, newUser);
         } else if (!user.verified) {
           //user has account bt not verified//registered using form
-          return cb(err);
+          return cb(null);
         } else {
           return cb(null, user);
         }
@@ -223,13 +223,11 @@ passport.use(
       const email = profile.emails?.[0]?.value;
 
       if (!email) {
-        return cb(
-          new Error(`Failed! Please choose a different way to sign in`)
-        );
+         return cb(null);
       }
 
       User.findOne({ email }, (err: Error, user: IUser) => {
-        if (err) return cb(err);
+        if (err) return cb(null);
 
         if (!user) {
           const newUser = new User({
@@ -243,7 +241,7 @@ passport.use(
           return cb(null, newUser);
         } else if (!user.verified) {
           //user has account bt not verified//registered using form
-          return cb(err);
+          return cb(null);
         } else {
           return cb(null, user);
         }

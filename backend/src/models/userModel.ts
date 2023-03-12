@@ -12,8 +12,8 @@ export interface IUser {
   roles: string[]; //with array, you can do user.roles.push('')
   newEmail: string;
   verified: boolean;
-  verifyEmailToken: string;
-  resetPasswordToken: { token?: string; expiresIn?: number };
+  verifyEmailToken: string | null;
+  resetPasswordToken: { token?: string; expiresIn?: number } | null;
 }
 
 const userSchema = new Schema(

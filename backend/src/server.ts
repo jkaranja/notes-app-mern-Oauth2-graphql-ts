@@ -2,7 +2,6 @@
 import "dotenv/config";
 import "express-async-errors";
 import express from "express";
-const app = express();
 import connectDB from "./config/dbConn";
 import path from "path";
 import errorHandler from "./middleware/errorHandler";
@@ -11,12 +10,16 @@ import cors from "cors";
 import cookieParser from "cookie-parser";
 import corsOptions from "./config/corsOptions";
 import mongoose from "mongoose";
-
 import authRoutes from "./routes/authRoutes";
 import userRoutes from "./routes/userRoutes";
 import noteRoutes from "./routes/noteRoutes";
 import downloadRoutes from "./routes/downloadRoutes";
 import rootRoutes from "./routes/rootRoutes";
+
+//load & run passport middleware(initialize + strategies) for Oauth2/SSO
+import "./config/passport";
+
+const app = express();
 
 const PORT = process.env.PORT || 4000; //avoid 5000//used by other services eg linkedin passport
 connectDB();
@@ -35,8 +38,6 @@ app.use(cookieParser());
 // }
 //if no origin configured, it allows all origins
 app.use(cors(corsOptions));
-//load passport middleware for Oauth2/SSO
-require("./config/passport");
 
 /*-----------------------------------------
  * SERVE STATIC FILES i.e css, images or js files eg files in public or build folder
