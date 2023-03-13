@@ -52,10 +52,12 @@ const getAllNotes: RequestHandler<
   const skip = (page - 1) * size; //eg page = 5, it has already displayed 4 * 10//so skip prev items
 
   //date range
-  //if from fromDate:true, fetch all records not older than fromDate || no lower limit i.e not older than midnight of January 1, 1970
-  const startDate = fromDate ? startOfDay(new Date(fromDate)) : new Date(0);
-  // if toDate:true, fetch all records older than toDate || no upper limit i.e current date
-  const endDate = toDate ? endOfDay(new Date(toDate)) : new Date();
+  //if from fromDate:true, fetch all records not older than fromDate || no lower limit i.e not older than midnight of January 1, 1970//from midnight
+  const startDate = fromDate
+    ? startOfDay(new Date(fromDate))
+    : startOfDay(new Date(0));
+  // if toDate:true, fetch all records older than toDate || no upper limit i.e current date////end of day//up to midnight of that day
+  const endDate = toDate ? endOfDay(new Date(toDate)) : endOfDay(new Date());
 
   //format with date-fns or use: new Date(new Date(fromDate).setHours(0o0, 0o0, 0o0)), //start searching from the very beginning of our start date eg //=> Tue Sep 02 2014 00:00:00
   //new Date(new Date(toDate).setHours(23, 59, 59)), //up to but not beyond the last minute of our endDate /eg Tue Sep 02 2014 23:59:59.999
