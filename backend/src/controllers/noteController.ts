@@ -6,7 +6,6 @@ import cleanFiles from "../utils/cleanFiles";
 import { RequestHandler } from "express";
 import mongoose from "mongoose";
 
-
 //filter regex
 //https://attacomsian.com/blog/mongoose-like-regex
 //https://stackoverflow.com/questions/43729199/how-i-can-use-like-operator-on-mongoose
@@ -49,23 +48,22 @@ const getAllNotes: RequestHandler<
   const page = parseInt(req.query.page) || 1; //current page no. / sent as string convert to number//page not sent use 1
   const size = parseInt(req.query.size) || 15; //items per page//if not sent from FE/ use default 15
   const { fromDate, toDate } = req.query;
-  const searchTerm = req.query.search;
+  const searchTerm = req.query.search || ""; //will be a case insensitive match//empty string match all
   const skip = (page - 1) * size; //eg page = 5, it has already displayed 4 * 10//so skip prev items
 
   //date range
   //if from fromDate:true, fetch all records not older than fromDate || no lower limit i.e not older than midnight of January 1, 1970
-  const startDate = fromDate
-    ? startOfDay(new Date(fromDate))
-    : new Date(Date.now());
+  const startDate = fromDate ? startOfDay(new Date(fromDate)) : new Date(0);
   // if toDate:true, fetch all records older than toDate || no upper limit i.e current date
-  const endDate = toDate
-    ? endOfDay(new Date(toDate))
-    : new Date();
+  const endDate = toDate ? endOfDay(new Date(toDate)) : new Date();
+
   //format with date-fns or use: new Date(new Date(fromDate).setHours(0o0, 0o0, 0o0)), //start searching from the very beginning of our start date eg //=> Tue Sep 02 2014 00:00:00
   //new Date(new Date(toDate).setHours(23, 59, 59)), //up to but not beyond the last minute of our endDate /eg Tue Sep 02 2014 23:59:59.999
   //or use date-fns to add start of day & end of day
 
-  let query = Note.find({
+  //db.collection.find(filter/query/conditions, projection)//filter is the current term
+  //can't use let query =  Note.query(). await query.count(), then await query.skip()//query already used/tracked with count()
+  let filter = {
     $and: [
       { user: id },
       { title: { $regex: `.*${searchTerm}.*`, $options: "i" } }, //like %_keyword%  & case insensitive//
@@ -76,9 +74,9 @@ const getAllNotes: RequestHandler<
         },
       },
     ],
-  });
+  };
 
-  const total = await query.count(); //Task.countDocument() ///total docs
+  const total = await Note.find(filter).count(); //or Note.countDocument() ///total docs
   //if total = 0 //error
   if (!total) {
     return res.status(400).json({ message: "No notes found" });
@@ -91,14 +89,15 @@ const getAllNotes: RequestHandler<
     return res.status(400).json({ message: "Page not found" });
   }
 
-  const result = await query
+  const result = await Note.find(filter)
     .skip(skip)
     .limit(size)
     .sort({ updatedAt: -1 }) //desc//recent first
-    .lean();
+    .lean(); //return a pure js object//not mongoose document//don't convert result to mongoose document//about 5x smaller!//faster
 
   res.status(200).json({
     pages,
+    total,
     notes: result,
   });
 };
@@ -132,7 +131,7 @@ const getNoteById: RequestHandler = async (req, res) => {
 interface CreateNoteBody {
   title?: string;
   content?: string;
-  deadline?: Date;
+  deadline?: string;
 }
 
 /**
@@ -186,7 +185,7 @@ interface UpdateNoteParams {
 interface UpdateNoteBody {
   title?: string;
   content?: string;
-  deadline?: Date;
+  deadline?: string;
 }
 
 /**

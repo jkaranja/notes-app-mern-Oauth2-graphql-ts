@@ -27,7 +27,7 @@ export interface INote extends Document {
   user: Types.ObjectId;
   title: string;
   content: string | undefined;
-  deadline: Date;
+  deadline: string;
   files: INoteFile[];
   noteId: number;
 }
@@ -47,7 +47,7 @@ const noteSchema = new Schema<INote>(
       type: String,
     },
     deadline: {
-      type: Date,
+      type: String,
     },
     files: {
       type: [

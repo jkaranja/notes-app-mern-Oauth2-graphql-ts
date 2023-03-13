@@ -44,7 +44,7 @@ const login: RequestHandler<unknown, unknown, LoginBody, unknown> = async (
     return res.status(401).json({ message: "Wrong email or password" });
   }
 
-  if (!foundUser.verified) {
+  if (!foundUser.isVerified) {
     return res.status(401).json({
       message: "Please verify your email first. We sent a link to your email",
     });
@@ -164,7 +164,7 @@ const verifyEmail: RequestHandler<
     });
   }
 
-  user.verified = true;
+  user.isVerified = true;
 
   user.verifyEmailToken = null; //invalidate token after successful verification
 
@@ -208,9 +208,9 @@ const forgotPassword: RequestHandler = async (req, res) => {
     .update(resetToken)
     .digest("hex");
 
-  user.resetPasswordToken!.token = resetPasswordToken;
+  user.resetPasswordToken = resetPasswordToken;
 
-  user.resetPasswordToken!.expiresIn = Date.now() + 24 * 60 * 60 * 1000; //expire in 24 hrs
+  user.resetPasswordTokenExpiresAt = Date.now() + 24 * 60 * 60 * 1000; //expire in 24 hrs
 
   //send email//then use match.params.resetToken to get the token
   const emailOptions = {
@@ -256,8 +256,13 @@ const resetPassword: RequestHandler = async (req, res) => {
 
   const token = crypto.createHash("sha256").update(resetToken).digest("hex");
 
+  // const user = await User.findOne({
+  //   resetPasswordToken: { token, expiresIn: { $gt: Date.now() } },
+  // });
+
   const user = await User.findOne({
-    resetPasswordToken: { token, expiresIn: { $gt: Date.now() } },
+    resetPasswordToken: token,
+    resetPasswordTokenExpiresAt: { $gt: Date.now() },
   });
 
   if (!user) {
@@ -325,12 +330,13 @@ const refresh: RequestHandler = (req, res) => {
  * @desc - Logout
  * @route - POST api/auth/logout
  * @access - Public
- * 
+ *
  */
 const logout: RequestHandler = (req, res) => {
   const cookies = req.cookies;
   if (!cookies?.jwt) {
     //return res.sendStatus(204); //No content// sendStatus is same as res.status(204).send('No content')
+    //204 don't have response body
     ////sendStatus sets res http status code and sends the status code string representation as res body
     return res.status(200).json({ message: "Logged out" });
   }

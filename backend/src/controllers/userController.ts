@@ -246,7 +246,7 @@ const updateUser: RequestHandler = async (req, res) => {
   const { id } = req.params;
 
   //check if id is a valid ObjectId//ObjectIds is constructed only from 24 hex character strings
-  if (!id.match(/^[0-9a-fA-F]{24}$/)) {
+  if (!mongoose.isValidObjectId(id)) {
     await removeImage(publicId);
     return res.status(400).json({ message: "User not found" });
   }
@@ -374,7 +374,9 @@ const deleteUser: RequestHandler = async (req, res) => {
   //clear refresh token cookie
   res.clearCookie("jwt", { httpOnly: true, sameSite: "none", secure: true });
 
-  res.status(204).json({ message: "Account deactivated" }); //on frontend, success = clear state and redirect to home
+  //204 don't have a response body
+  //res.status(204).json({ message: "Account deactivated" }); //on frontend, success = clear state and redirect to home
+  res.json({ message: "Account deactivated" }); //on frontend, success = clear state and redirect to home
 };
 
 export { getUser, registerUser, updateUser, deleteUser, resendVerifyEmail };

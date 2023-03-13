@@ -53,13 +53,13 @@ passport.use(
           const newUser = new User({
             username: profile.displayName,
             email,
-            verified: true,
+            isIsVerified: true,
           });
 
           newUser.save();
 
           return cb(null, newUser);
-        } else if (!user.verified) {
+        } else if (!user.isVerified) {
           //user has account bt not verified//registered using form
           return cb(null);
         } else {
@@ -96,13 +96,13 @@ passport.use(
           const newUser = new User({
             username: profile.displayName,
             email,
-            verified: true,
+            isVerified: true,
           });
 
           newUser.save();
 
           return cb(null, newUser);
-        } else if (!user.verified) {
+        } else if (!user.isVerified) {
           //user has account bt not verified//registered using form
           return cb(null);
         } else {
@@ -139,13 +139,13 @@ passport.use(
           const newUser = new User({
             username: profile.displayName,
             email,
-            verified: true,
+            isVerified: true,
           });
 
           newUser.save();
 
           return cb(null, newUser);
-        } else if (!user.verified) {
+        } else if (!user.isVerified) {
           //user has account bt not verified//registered using form
           return cb(null);
         } else {
@@ -190,13 +190,13 @@ passport.use(
           const newUser = new User({
             username: profile.displayName,
             email,
-            verified: true,
+            isVerified: true,
           });
 
           newUser.save();
 
           return cb(null, newUser);
-        } else if (!user.verified) {
+        } else if (!user.isVerified) {
           //user has account bt not verified//registered using form
           return cb(null);
         } else {
@@ -233,13 +233,13 @@ passport.use(
           const newUser = new User({
             username: profile.displayName,
             email,
-            verified: true,
+            isVerified: true,
           });
 
           newUser.save();
 
           return cb(null, newUser);
-        } else if (!user.verified) {
+        } else if (!user.isVerified) {
           //user has account bt not verified//registered using form
           return cb(null);
         } else {

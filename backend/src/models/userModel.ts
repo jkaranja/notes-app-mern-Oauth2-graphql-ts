@@ -11,9 +11,10 @@ export interface IUser {
   profileUrl: string; //image url on cloud nary
   roles: string[]; //with array, you can do user.roles.push('')
   newEmail: string;
-  verified: boolean;
+  isVerified: boolean;
   verifyEmailToken: string | null;
-  resetPasswordToken: { token?: string; expiresIn?: number } | null;
+  resetPasswordToken: string | null;
+  resetPasswordTokenExpiresAt: number | null;
 }
 
 const userSchema = new Schema(
@@ -25,9 +26,10 @@ const userSchema = new Schema(
     profileUrl: { type: String },
     roles: { type: [String], default: ["admin"] }, //arr of strings
     newEmail: { type: String },
-    verified: { type: Boolean, default: false },
+    isVerified: { type: Boolean, default: false },
     verifyEmailToken: { type: String },
-    resetPasswordToken: { token: String, expiresIn: Number }, //{type:[String, Number]}//don't support tuple//use object type
+    resetPasswordToken: { type: String },
+    resetPasswordTokenExpiresAt: { type: Number },
   },
   { timestamps: true }
 );
