@@ -46,8 +46,10 @@ import {
   GOOGLE_URL,
   LINKEDIN_URL,
 } from "../../config/urls";
-import { useLoginMutation } from "./authApiSlice";
+
 import showToast from "../../common/showToast";
+import { useMutation } from "@apollo/client";
+import { LOGIN } from "../../graphql/mutations/authMutations";
 
 const Login = () => {
   useTitle("Login");
@@ -56,8 +58,7 @@ const Login = () => {
 
   const navigate = useNavigate();
 
-  const [login, { data, error, isLoading, isError, isSuccess }] =
-    useLoginMutation();
+  const [login, { data, error, loading: isLoading }] = useMutation(LOGIN);
 
   const [showPassword, setShowPassword] = React.useState(false);
 
@@ -84,11 +85,10 @@ const Login = () => {
   //from component A: navigate('/', {state: {from: 'data'}, replace: true})
   //in component B: console.log(location.state.from) //output = whatever
 
-type LoginInputs ={
-  email: string;
-  password: string;
-}
-
+  type LoginInputs = {
+    email: string;
+    password: string;
+  };
 
   const {
     register,
@@ -97,25 +97,27 @@ type LoginInputs ={
   } = useForm<LoginInputs>();
 
   const onSubmit = async (inputs: LoginInputs) => {
-  
-
-    await login(inputs);
+    await login({variables: inputs});
   };
 
   //on success
-  if (isSuccess && data!.accessToken) {
-    dispatch(setCredentials(data!.accessToken));
+  if (!error && data?.login?.accessToken) {
+    dispatch(setCredentials(data?.login?.accessToken));
     navigate(from, { replace: true });
   }
 
+
+ 
+
   //feedback
   useEffect(() => {
-    showToast({ message: error, isLoading, isError });
-
-
-
-
-  }, [isSuccess, isError, isLoading]);
+    showToast({
+      message: error?.message,
+      isLoading,
+      isError: Boolean(error),
+      
+    });
+  }, [data, error, isLoading]);
 
   return (
     <Box sx={{ display: "flex" }} justifyContent="center">
@@ -183,7 +185,7 @@ type LoginInputs ={
             </FormGroup>
 
             <Grid2 container justifyContent="space-between" alignItems="center">
-              <FormGroup  sx={{ fontSize: "12px" }}>
+              <FormGroup sx={{ fontSize: "12px" }}>
                 <FormControlLabel
                   control={
                     <Checkbox

@@ -21,9 +21,10 @@ import convertBytesToKB from "../../common/convertBytesToKB";
 import DownloadIcon from "@mui/icons-material/Download";
 
 import showToast from "../../common/showToast";
-import { handleSingleDownload, handleZipDownload } from "../../api/downloadAPI";
+
 import { selectCurrentToken } from "../auth/authSlice";
-import { useGetNoteQuery, useGetNotesQuery } from "./notesApiSlice";
+import { useQuery } from "@apollo/client";
+import { GET_NOTE } from "../../graphql/queries/noteQueries";
 
 const ViewNote = () => {
   const navigate = useNavigate();
@@ -58,27 +59,29 @@ const ViewNote = () => {
   //     refetchOnMountOrArgChange: false,
   //   }
   // );
+  //fetch query
   const {
-    data: note,
-    isFetching,
-    isSuccess,
-    isError,
+    loading: isLoading,
     error,
-  } = useGetNoteQuery(noteId, {
-    pollingInterval: 15000,
-    refetchOnFocus: true,
-    refetchOnMountOrArgChange: true,
+    data,
+  } = useQuery(GET_NOTE, {
+    variables: {
+      noteId,
+    },
+    fetchPolicy: "network-only", //fetch on mount//default is to not fetch if cache data exist
+    // nextFetchPolicy: "cache-first", //then use cache after mount
+    pollInterval: 15000, //15 secs
   });
 
   //feedback
   useEffect(() => {
     showToast({
-      message: error,
-      isLoading: isFetching,
-      isError,
-      isSuccess,
+      message: error?.message,
+      isLoading,
+      isError: Boolean(error),
+      //isSuccess: Boolean(data),
     });
-  }, [isSuccess, isError, isFetching]);
+  }, [data, error, isLoading]);
 
   return (
     <Box>
@@ -98,7 +101,7 @@ const ViewNote = () => {
           />
           <Divider />
           <CardContent>
-            <Typography paragraph> {note?.title}</Typography>
+            <Typography paragraph> {data?.note?.title}</Typography>
           </CardContent>
         </Card>
 
@@ -108,7 +111,19 @@ const ViewNote = () => {
           />
           <Divider />
           <CardContent>
-            <Typography paragraph> {note?.content}</Typography>
+            <Typography paragraph> {data?.note?.content}</Typography>
+          </CardContent>
+        </Card>
+
+        <Card sx={{ mb: 3 }}>
+          <CardHeader
+            title={<Typography variant="subtitle1">Deadline</Typography>}
+          />
+          <Divider />
+          <CardContent>
+            <Typography paragraph>
+              {new Date(data?.note?.deadline).toLocaleDateString("en-GB")}
+            </Typography>
           </CardContent>
         </Card>
 
@@ -118,7 +133,9 @@ const ViewNote = () => {
             action={
               <Button
                 startIcon={<DownloadIcon />}
-                onClick={() => handleZipDownload({ files: note?.files, token })}
+                // onClick={() =>
+                //   handleZipDownload({ files: data.note?.files, token })
+                // }
                 sx={{ px: 2 }}
               >
                 Download
@@ -127,7 +144,7 @@ const ViewNote = () => {
           />
           <Divider />
           <CardContent sx={{ px: 2 }}>
-            {note?.files?.map((file, i) => (
+            {/* {data.note?.files?.map((file, i) => (
               <Box className="dropzone-file-preview" key={i}>
                 <Typography component="span">
                   {file.filename.slice(0, 50).trim()} ...
@@ -142,7 +159,7 @@ const ViewNote = () => {
                   Download
                 </Button>
               </Box>
-            ))}
+            ))} */}
           </CardContent>
         </Card>
       </Box>

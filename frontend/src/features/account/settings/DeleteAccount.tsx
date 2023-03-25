@@ -1,3 +1,4 @@
+import { useMutation } from "@apollo/client";
 import {
   Box,
   Button,
@@ -10,15 +11,14 @@ import React from "react";
 import { useState } from "react";
 import { useEffect } from "react";
 import showToast from "../../../common/showToast";
+import { DELETE_USER } from "../../../graphql/mutations/userMutations";
 import { User } from "../../../types/user";
-import { useDeleteUserMutation } from "../../user/userApiSlice";
+
 import ConfirmPwd from "./ConfirmPwd";
 
 type DeleteAccountProps = {
   user: User;
 };
-
-
 
 const DeleteAccount = ({ user }: DeleteAccountProps) => {
   const [deleteAc, setDeleteAc] = useState(true);
@@ -33,8 +33,8 @@ const DeleteAccount = ({ user }: DeleteAccountProps) => {
   };
   //end of dialog
 
-  const [deleteUser, { data, error, isLoading, isError, isSuccess }] =
-    useDeleteUserMutation();
+  const [deleteUser, { data, error, loading: isLoading }] =
+    useMutation(DELETE_USER);
 
   /**--------------------------------------
    HANDLE DELETE A/C
@@ -44,18 +44,19 @@ const DeleteAccount = ({ user }: DeleteAccountProps) => {
   };
   const onSubmitDelete = (password: string) => {
     return async () => {
-      await deleteUser(user.id);
+      await deleteUser({ variables: { id: user._id } });
     };
   };
-  ///feedback & reset form
+
+  //feedback
   useEffect(() => {
     showToast({
-      message: error ? error : "Deleted",
+      message: error?.message || "Deleted",
       isLoading,
-      isError,
-      isSuccess,
+      isError: Boolean(error),
+      isSuccess: Boolean(data),
     });
-  }, [isSuccess, isError, isLoading]);
+  }, [data, error, isLoading]);
 
   //dialog props
   const dialogProps = {
@@ -68,7 +69,7 @@ const DeleteAccount = ({ user }: DeleteAccountProps) => {
 
   return (
     <Box component={Paper} p={3} mt={3}>
-      <ConfirmPwd  {...dialogProps} />
+      <ConfirmPwd {...dialogProps} />
       <Typography variant="h6">Delete account</Typography>
       <Typography variant="caption" gutterBottom>
         <FormControlLabel

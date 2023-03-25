@@ -5,7 +5,9 @@ import Intro from "../../components/Intro";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import showToast from "../../common/showToast";
 import EditNoteForm from "./EditNoteForm";
-import { useGetNoteQuery } from "./notesApiSlice";
+
+import { useQuery } from "@apollo/client";
+import { GET_NOTE } from "../../graphql/queries/noteQueries";
 
 const EditNote = () => {
   const navigate = useNavigate();
@@ -18,37 +20,39 @@ const EditNote = () => {
 
   const noteId = parseInt(id!);
 
- 
+  
 
   const from = location.state?.from?.pathname || "/notes";
 
   //fetch query
   const {
-    data: note,
-    isFetching,
-    isSuccess,
-    isError,
+    loading: isLoading,
     error,
-  } = useGetNoteQuery(noteId, {
-    pollingInterval: 15000,
-    refetchOnFocus: true,
-    refetchOnMountOrArgChange: true,
+    data,
+  } = useQuery(GET_NOTE, {
+    variables: {
+      noteId,
+    },
+    fetchPolicy: "network-only", //fetch on mount//default is to not fetch if cache data exist
+    //nextFetchPolicy: "cache-first", //then use cache after mount
+    pollInterval: 15000, //15 secs
   });
+
 
   //feedback
   useEffect(() => {
     showToast({
-      message: error,
-      isLoading: isFetching,
-      isError,
-      isSuccess,
+      message: error?.message,
+      isLoading,
+      isError: Boolean(error),
+      //isSuccess: Boolean(data),
     });
-  }, [isSuccess, isError, isFetching]);
+  }, [data, error, isLoading]);
 
   //edit form props
   const formProps = {
-    id: noteId!,
-    note: note!,
+    noteId,
+    note: data?.note,
   };
 
   return (

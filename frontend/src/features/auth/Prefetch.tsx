@@ -1,44 +1,42 @@
+import { useLazyQuery, useQuery } from "@apollo/client";
 import React from "react";
 import { useEffect } from "react";
 import { Outlet } from "react-router-dom";
 import store from "../../app/store";
-import { notesApiSlice } from "../notes/notesApiSlice";
+import client from "../../config/apolloClient";
+import { GET_NOTES } from "../../graphql/queries/noteQueries";
 
 const Prefetch = () => {
-  //prefetching before you navigate to page eg when you hover over a menu item, next btn, link etc
-  //use usePrefetch //don't run auto but returns a trigger fn that you can call
-
-  //USING PREFETCH HOOK
-  // const prefetchUser = usePrefetch("getUser"); //or define all options here prefetch("getUser", 4, {force: true, ifOlderThan..})//4 is url param for the endpoint query(id)
-
-  //<button onMouseEnter={() => prefetchUser(4, { ifOlderThan: 35 })}>//ifOlderThan in sec checks if the last similar query time and current time is greater than it, if true prefetch//force: true overrides this.
-  //<button onMouseEnter={() => prefetchUser(4, { force: true })}> //force forces refetching even when cache exists
-
-  //PREFETCH ON MOUNT USING USE EFFECT
-  //RTK SITE
-  //   const dispatch = useDispatch();
-  //   useEffect(() => {
-  //     dispatch(apiSlice.util.prefetch(endpoint, arg, options));
-  //   }, []);
-
-  //DAVE//ADDED AS A ROUTE COMPONENT
-  
-//default on mount query args
-const queryArgs = {
-  currentPage: 1,
-  itemsPerPage: 10,
-  debouncedSearchTerm: "",
-  dateFilter: {},
-}
 
 
+
+  //for now, not needed since notes are set to 'network-only' in noteList to always fetch on mount
+  const [notes, { loading: isLoading, data, error, }] = useLazyQuery(
+    GET_NOTES,
+    {
+      variables: {
+        page: 1,
+        size: 10,
+        endDate: "",
+        startDate: "",
+        searchTerm: "",
+      },
+      fetchPolicy: "network-only", //fetch on mount//default is to not fetch if cache data exist
+      //nextFetchPolicy: "cache-first", //then use cache after mount
+      // pollInterval: 15000, //15 secs
+      notifyOnNetworkStatusChange: true, //if using refetch or fetchMore to update loading and re-render
+    }
+  );
+
+  //prefetch once on mount
   useEffect(() => {
-    store.dispatch(
-      notesApiSlice.util.prefetch("getNotes", queryArgs, { force: true })
-    );
-    // store.dispatch(
-    //   usersApiSlice.util.prefetch("getUsers", "usersList", { force: true })
-    //);
+    notes();
+
+    //or not using query hooks
+    // client.query({
+    //   query: GET_NOTES,
+    //   variables: { ...queryArgs },
+    // });
   }, []);
 
   return <Outlet />;

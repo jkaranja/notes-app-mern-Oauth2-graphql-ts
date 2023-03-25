@@ -1,3 +1,4 @@
+import { useMutation } from "@apollo/client";
 import {
   Avatar,
   Box,
@@ -8,6 +9,7 @@ import {
   Typography,
 } from "@mui/material";
 import Grid2 from "@mui/material/Unstable_Grid2/Grid2";
+import axios from "axios";
 import React from "react";
 import { useState } from "react";
 import { useEffect } from "react";
@@ -15,26 +17,36 @@ import { useForm } from "react-hook-form";
 import { useSelector } from "react-redux";
 import showToast from "../../../common/showToast";
 import { EMAIL_REGEX } from "../../../constants/regex";
+import { UPDATE_USER } from "../../../graphql/mutations/userMutations";
 import { User } from "../../../types/user";
-import { selectNotes } from "../../notes/notesSlice";
-import { useUpdateUserMutation } from "../../user/userApiSlice";
+
 import ConfirmPwd from "./ConfirmPwd";
 
-const MEGA_BYTES_PER_BYTE = 1e6;
-const convertBytesToMB = (bytes: number) => Math.round(bytes / MEGA_BYTES_PER_BYTE);
+const CLOUD_BASE_URL = "https://api.cloudinary.com/v1_1";
+const API = axios.create({
+  baseURL: CLOUD_BASE_URL,
+  headers: {
+    "Content-Type": "multipart/form-data", //default
+  },
+});
 
+//NOTE: can't remove image from client for security reasons//send publicId of prev profile image along with update data to the server to remove this images using cloudinary node module//
+//https://priyal-babel.medium.com/upload-and-delete-images-with-a-react-app-using-cloudinary-api-32565d11d760
+//https://cloudinary.com/documentation/upload_images#uploading_with_a_direct_call_to_the_rest_api
+
+const MEGA_BYTES_PER_BYTE = 1e6;
+const convertBytesToMB = (bytes: number) =>
+  Math.round(bytes / MEGA_BYTES_PER_BYTE);
 
 type EditProfileProps = {
   user: User;
 };
 
-
-
 const EditProfile = ({ user }: EditProfileProps) => {
-  const { uploadProgress } = useSelector(selectNotes);
   const [selectedPic, setSelectedPic] = useState<File | null>(null);
   const [profileUrl, setProfileUrl] = useState("");
   const [picError, setPicError] = useState("");
+  const [isUploading, setIsUploading] = useState(false);
   //dialog
   const [openD, setOpenD] = useState(false);
   const handleOpenD = () => {
@@ -45,12 +57,11 @@ const EditProfile = ({ user }: EditProfileProps) => {
   };
   //end of dialog
 
-
-   type EditProfileInputs = Record<string, string> & {
-     username: string;
-     email: string;
-     phoneNumber: string;
-   };
+  type EditProfileInputs = Record<string, string> & {
+    username: string;
+    email: string;
+    phoneNumber: string;
+  };
   //a/c hook
   const {
     register,
@@ -59,18 +70,18 @@ const EditProfile = ({ user }: EditProfileProps) => {
     reset: resetForm,
   } = useForm<EditProfileInputs>();
 
-  const [updateUser, { data, error, isLoading, isError, isSuccess }] =
-    useUpdateUserMutation();
+  const [updateUser, { data, error, loading: isLoading }] =
+    useMutation(UPDATE_USER);
 
   /**-----------------------------------------
    HANDLE PIC CHANGE
  --------------------------------------------*/
   //handle file change/set error
-  const handlePicChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handlePicChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const fileType = ["image/jpeg", "image/png", "image/gif"];
     setPicError("");
 
-    if (convertBytesToMB((e.target?.files as FileList)[0]?.size || 0) > 5) {
+    if (convertBytesToMB(e.target?.files?.[0]?.size || 0) > 5) {
       setPicError("File must be less than or equal to 5mb in size");
       return;
     }
@@ -78,7 +89,31 @@ const EditProfile = ({ user }: EditProfileProps) => {
     //   setPicError("Please Select an Image");
     //   return;
     // }
-    setSelectedPic((e.target?.files as FileList)[0]);
+    setSelectedPic(e.target?.files?.[0]!);
+  };
+
+  /**-----------------------------------------
+   IMAGE UPLOADER FN
+ --------------------------------------------*/
+  const uploadImage = async (image: Blob) => {
+    const formData = new FormData();
+    formData.append("file", image);
+    formData.append("upload_preset", import.meta.env.VITE_APP_PRESET_NAME);
+    formData.append("cloud_name", import.meta.env.VITE_APP_CLOUD_NAME);
+    formData.append("folder", "AUTH");
+    try {
+      const response = await API.post(
+        `/${import.meta.env.VITE_APP_CLOUD_NAME}/image/upload`,
+        formData
+      );
+      // console.log(response.data)//
+      //{"public_id":"AUTH/uce33vvebsaacxixl3uk",
+      //"url":"http://res.cloudinary.com/da4urrvxa/image/upload/v1679744164/AUTH/uce33vvebsaacxixl3uk.jpg","secure_url":"https://res.cloudinary.com/da4urrvxa/image/upload/v1679744164/AUTH/uce33vvebsaacxixl3uk.jpg","folder":"AUTH"}
+      //extract public id from url on server for deleting image
+      return response.data.secure_url;
+    } catch (err) {
+      if (axios.isAxiosError(err)) console.log(err.response?.data);
+    }
   };
 
   /**--------------------------------
@@ -86,19 +121,27 @@ const EditProfile = ({ user }: EditProfileProps) => {
  -------------------------------------*/
   const onSubmitAccount = (password: string) => {
     return async (inputs: EditProfileInputs) => {
-      const formData = new FormData();
-      formData.append("profilePic", selectedPic as File);
+      try {
+        setIsUploading(true)
+        //upload file to cloudinary and store secure url if new image
+        let profileUrl;
+        if (selectedPic) {
+          profileUrl = await uploadImage(selectedPic!);
+        }
 
-      formData.append("password", password);
-
-      Object.keys(inputs).forEach((field, i) => {
-        formData.append(field, inputs[field]);
-      });
-
-      await updateUser({
-        userData: formData,
-        id: user.id,
-      });
+        setIsUploading(false);
+        updateUser({
+          variables: {
+            ...inputs,
+            id: user._id,
+            password,
+            profileUrl: profileUrl || user?.profileUrl,
+          },
+        });
+      } catch (error) {
+        setIsUploading(false);
+        console.log(error);
+      }
     };
   };
 
@@ -112,6 +155,14 @@ const EditProfile = ({ user }: EditProfileProps) => {
     return () => URL.revokeObjectURL(objectUrl);
   }, [selectedPic]);
 
+//reset profile pic to user.profileUrl
+const handlePicReset = () => {
+  setPicError("");
+  setProfileUrl(user?.profileUrl!);
+};
+
+
+
   //set defaults
   useEffect(() => {
     resetForm({ ...user });
@@ -122,14 +173,15 @@ const EditProfile = ({ user }: EditProfileProps) => {
  ---------------------------------------------*/
   //feedback
   useEffect(() => {
+
+    
     showToast({
-      message: error ? error : "Updated",
-      isLoading,
-      isError,
-      isSuccess,
-      progress: uploadProgress,
+      message: error?.message || "Updated",
+      isLoading: isLoading || isUploading,
+      isError: Boolean(error),
+      isSuccess: Boolean(data),
     });
-  }, [isSuccess, isError, isLoading, uploadProgress]);
+  }, [data, error, isLoading, isUploading]);
 
   //dialog props
   const dialogProps = {
@@ -170,7 +222,7 @@ const EditProfile = ({ user }: EditProfileProps) => {
                 </Button>
                 <Button
                   color="secondary"
-                  onClick={() => setProfileUrl(user?.profileUrl!)}
+                  onClick={handlePicReset}
                 >
                   Reset
                 </Button>
@@ -262,6 +314,7 @@ const EditProfile = ({ user }: EditProfileProps) => {
             color="secondary"
             variant="contained"
             disableElevation
+            disabled={Boolean(picError)}
           >
             Save changes
           </Button>

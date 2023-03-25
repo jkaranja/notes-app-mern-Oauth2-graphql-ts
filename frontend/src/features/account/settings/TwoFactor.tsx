@@ -1,11 +1,10 @@
-import { Box, Button, Paper, Typography } from '@mui/material';
-import React from 'react'
-import { User } from '../../../types/user';
+import { Box, Button, Paper, Typography } from "@mui/material";
+import React from "react";
+import { User } from "../../../types/user";
 
-
-type TwoFactorProps ={
-  user: User
-}
+type TwoFactorProps = {
+  user: User;
+};
 
 const TwoFactor = ({ user }: TwoFactorProps) => {
   return (
@@ -28,4 +27,4 @@ const TwoFactor = ({ user }: TwoFactorProps) => {
   );
 };
 
-export default TwoFactor
+export default TwoFactor;

@@ -1,3 +1,4 @@
+import { useLazyQuery } from "@apollo/client";
 import { Backdrop, CircularProgress } from "@mui/material";
 
 import React, { useEffect, useState } from "react";
@@ -9,10 +10,12 @@ import {
   useNavigate,
   useSearchParams,
 } from "react-router-dom";
+import { REFRESH_TOKEN } from "../../graphql/queries/authQueries";
+import { useAppDispatch } from "../../hooks/useAppDispatch";
 import usePersist from "../../hooks/usePersist";
 
-import { useRefreshMutation } from "./authApiSlice";
-import { selectCurrentToken } from "./authSlice";
+
+import { selectCurrentToken, setCredentials } from "./authSlice";
 
 const RequireAuth = () => {
   const [persist] = usePersist();
@@ -21,8 +24,19 @@ const RequireAuth = () => {
   //set by oath success redirect//isAuthenticated = is a string since it is sent as query string
   const isAuthenticated = searchParams.get("authenticated");
 
-  const [refresh, { isUninitialized, isLoading, isSuccess, isError, error }] =
-    useRefreshMutation();
+  const dispatch = useAppDispatch();
+
+  const [refresh, { loading: isLoading, error, data, called }] = useLazyQuery(
+    REFRESH_TOKEN,
+    {
+      fetchPolicy: "network-only", //always fetch//don't use cache
+      //will be called when no error occurred
+      onCompleted: (data) => {
+        //store token in store        
+        dispatch(setCredentials(data.refresh.accessToken));
+      },
+    }
+  );
 
   let content;
 
@@ -34,7 +48,7 @@ const RequireAuth = () => {
     //fetch using refresh token in cookie and store access token in store
     //if error eg refresh has expired, go to login
     const getToken = async () => {
-      await refresh(null);
+      await refresh();
     };
     if ((persist || isAuthenticated) && !token) getToken();
   }, []);
@@ -52,16 +66,16 @@ const RequireAuth = () => {
         <CircularProgress color="inherit" />
       </Backdrop>
     );
-  } else if (isSuccess) {
-    //no needed
+  } else if (data && !error && !isLoading) {
+    //no needed// isSuccess
     //after re-render due to state change// token=true below will catch this as well
     //allow protected access
     content = <Outlet />;
-  } else if (isError) {
-    //login page
+  } else if (error && !isLoading) {
+    //login page//isError
     content = <Navigate to="/login" state={{ from: location }} replace />;
-  } else if (token && isUninitialized) {
-    //token: true// handles !persist && token / persist && token
+  } else if (token && !called) {
+    //token: true & isUninitialized// handles !persist && token / persist && token
     //allow protected access
     content = <Outlet />;
   } else if (!persist && !isAuthenticated && !token) {

@@ -1,3 +1,4 @@
+import { useMutation } from "@apollo/client";
 import {
   Box,
   Button,
@@ -15,18 +16,16 @@ import convertBytesToKB from "../../common/convertBytesToKB";
 import showToast from "../../common/showToast";
 import DatePicker from "../../components/DatePicker";
 import Dropzone from "../../components/Dropzone";
+import { UPDATE_NOTE } from "../../graphql/mutations/noteMutations";
 import { Note, NoteFile } from "../../types/note";
-import { useUpdateNoteMutation } from "./notesApiSlice";
-import { selectNotes } from "./notesSlice";
 
 interface EditNoteFormProps {
   note: Note;
-  id: number;
+  noteId: number;
 }
 
-const EditNoteForm = ({ note, id }: EditNoteFormProps) => {
-  const { uploadProgress } = useSelector(selectNotes);
-
+const EditNoteForm = ({ note, noteId }: EditNoteFormProps) => {
+ 
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [selectedDate, setSelectedDate] = useState<Date | number>(new Date());
 
@@ -46,8 +45,9 @@ const EditNoteForm = ({ note, id }: EditNoteFormProps) => {
   } = useForm<NoteInputs>();
 
   //update mutation
-  const [updateNote, { data, error, isLoading, isError, isSuccess }] =
-    useUpdateNoteMutation();
+
+  const [updateNote, { data, error, loading: isLoading }] =
+    useMutation(UPDATE_NOTE);
 
   /* ----------------------------------------
    REMOVE FILES
@@ -66,30 +66,23 @@ const EditNoteForm = ({ note, id }: EditNoteFormProps) => {
    UPDATE NOTE
    ----------------------------------------*/
   ///submit note form
-  const onSubmitNote = async (inputs: NoteInputs) => {
+  const onSubmitNote = (inputs: NoteInputs) => {
     if (!selectedDate) return null;
 
-    const formData = new FormData();
-
-    selectedFiles.forEach((file, i) => {
-      formData.append("files", selectedFiles[i]);
+    updateNote({
+      variables: {
+        ...inputs,
+        noteId,
+        files: "",
+        deadline: (selectedDate as Date).toISOString(),
+      },
     });
-
-    formData.append("deadline", (selectedDate as Date).toISOString());
-
-    formData.append("removedFiles", JSON.stringify(removedFiles));
-
-    Object.keys(inputs).forEach((field, i) => {
-      formData.append(field, inputs[field]);
-    });
-
-    await updateNote({ noteData: formData, id });
   };
 
   //set defaults
   useEffect(() => {
     resetForm({ title: note?.title, content: note?.content });
-    setCurrentFiles(note?.files);
+   // setCurrentFiles(note?.files);
     setSelectedFiles([]);
 
     setRemovedFiles([]);
@@ -97,16 +90,16 @@ const EditNoteForm = ({ note, id }: EditNoteFormProps) => {
     setSelectedDate(new Date(note?.deadline).getTime()); //use .getTime() to pass as number//as date or iso string not working
   }, [note]);
 
-  ////feedback & reset form
+ 
+  //feedback
   useEffect(() => {
     showToast({
-      message: error || data?.message,
+      message: error?.message || "Note updated!",
       isLoading,
-      isError,
-      isSuccess,
-      progress: uploadProgress,
+      isError: Boolean(error),
+      isSuccess: Boolean(data),
     });
-  }, [isSuccess, isError, isLoading, uploadProgress]);
+  }, [data, error, isLoading]);
 
   return (
     <Box>
@@ -238,7 +231,7 @@ const EditNoteForm = ({ note, id }: EditNoteFormProps) => {
             type="submit"
             variant="contained"
             color="secondary"
-            disabled={isSubmitting}
+            // disabled={isSubmitting}
           >
             Update note
           </Button>

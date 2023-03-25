@@ -14,12 +14,15 @@ import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
 import EditIcon from "@mui/icons-material/Edit";
 import showToast from "../../common/showToast";
 import { useEffect } from "react";
-import { useDeleteNoteMutation } from "./notesApiSlice";
+
 import { Note } from "../../types/note";
+import { DELETE_NOTE } from "../../graphql/mutations/noteMutations";
+import { useMutation } from "@apollo/client";
+import { GET_NOTES } from "../../graphql/queries/noteQueries";
 
 type NoteItemProps = {
   note: Note;
-  handleChecked: (id: number) => void;
+  handleChecked: (id: string) => void;
 };
 
 const NoteItem = ({ note, handleChecked }: NoteItemProps) => {
@@ -30,22 +33,35 @@ const NoteItem = ({ note, handleChecked }: NoteItemProps) => {
   /* ----------------------------------------
    HANDLE DELETE NOTE
    ----------------------------------------*/
-  const [deleteNote, { data, isSuccess, isError, error, isLoading }] =
-    useDeleteNoteMutation();
 
-  const handleDeleteNote = async (id: number) => {
-    await deleteNote(id);
-  };
+  const [deleteNote, { data, error, loading: isLoading }] = useMutation(
+    DELETE_NOTE,
+    {
+      variables: {
+        noteId: note.noteId,
+      },
+      refetchQueries: [
+        // { query: GET_NOTES },//not working fetching but not refreshing notes// DocumentNode object parsed with gql//called with most recent variables
+        "GetAllNotes", //or Query name-query you've previously executed//will be called with the most recent variables
+      ],
+      notifyOnNetworkStatusChange: true,
+    }
+  );
 
+  // const handleDeleteNote = async (id: string) => {
+  //   deleteNote({ variables: { nodeId: id } });
+  // };
+
+  //feedback
   //feedback
   useEffect(() => {
     showToast({
-      message: error || data?.message,
+      message: error?.message || "Note deleted!",
       isLoading,
-      isError,
-      isSuccess,
+      isError: Boolean(error),
+      isSuccess: Boolean(data),
     });
-  }, [isSuccess, isError, isLoading]);
+  }, [data, error, isLoading]);
 
   return (
     <TableRow
@@ -111,7 +127,7 @@ const NoteItem = ({ note, handleChecked }: NoteItemProps) => {
         <IconButton
           onClick={() =>
             window.confirm("Are you sure? Note will be deleted") &&
-            deleteNote(note.noteId)
+            deleteNote({ variables: { noteId: note.noteId } })
           }
         >
           <DeleteOutlineIcon />

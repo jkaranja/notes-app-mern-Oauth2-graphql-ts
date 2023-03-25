@@ -8,12 +8,12 @@ export interface NoteFile {
 }
 
 export interface Note {
-  noteId: number;
+  noteId: string;
   title: string;
   content: string | undefined;
   deadline: Date;
   isChecked: boolean;
-  files: NoteFile[]; //or use Blob to rep a file // Blob extends File interface(File is a TS type for file)
+  files: string; //or use Blob to rep a file // Blob extends File interface(File is a TS type for file)
   createdAt: string;
   updatedAt: string;
 }
@@ -25,8 +25,8 @@ export interface NotesResponse {
 }
 
 export interface IDateFilter {
-toDate?: Date | string; 
-fromDate?: Date | string; 
+  endDate?: Date | string;
+  startDate?: Date | string;
 }
 
 export interface NotesArg {

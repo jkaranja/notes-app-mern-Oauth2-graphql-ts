@@ -40,13 +40,15 @@ import { useForm } from "react-hook-form";
 
 import { PWD_REGEX } from "../../constants/regex";
 import showToast from "../../common/showToast";
-import { useResetPwdMutation } from "./authApiSlice";
+
+import { RESET_PASSWORD } from "../../graphql/mutations/authMutations";
+import { useMutation } from "@apollo/client";
 
 const Reset = () => {
   useTitle("Reset password");
 
-  const [resetPwd, { data, error, isLoading, isError, isSuccess }] =
-    useResetPwdMutation();
+  const [resetPassword, { data, error, loading: isLoading }] =
+    useMutation(RESET_PASSWORD);
 
   const { token } = useParams();
 
@@ -83,22 +85,24 @@ const Reset = () => {
     watch,
   } = useForm<ResetInputs>();
 
-  const onSubmit = async (inputs: ResetInputs) => {
-    await resetPwd({
-      password: inputs.password,
-      resetPwdToken: token!,
+  const onSubmit = (inputs: ResetInputs) => {
+    resetPassword({
+      variables: {
+        password: inputs.password,
+        resetToken: token!,
+      },
     });
   };
-
+ 
   //feedback
   useEffect(() => {
     showToast({
-      message: error || data?.message,
+      message: error?.message || data?.resetPassword?.message,
       isLoading,
-      isError,
-      isSuccess,
+      isError: Boolean(error),
+      isSuccess: Boolean(data),
     });
-  }, [isSuccess, isError, isLoading]);
+  }, [data, error, isLoading]);
 
   return (
     <Box sx={{ display: "flex" }} justifyContent="center">

@@ -1,3 +1,4 @@
+import { useMutation } from "@apollo/client";
 import { Visibility, VisibilityOff } from "@mui/icons-material";
 import {
   Box,
@@ -15,6 +16,7 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import showToast from "../../../common/showToast";
 import { PWD_REGEX } from "../../../constants/regex";
+import { UPDATE_USER } from "../../../graphql/mutations/userMutations";
 import { User } from "../../../types/user";
 import { useUpdateUserMutation } from "../../user/userApiSlice";
 import ConfirmPwd from "./ConfirmPwd";
@@ -67,8 +69,10 @@ function ChangePwd({ user }: ChangePwdProps) {
     reset: resetPwd,
   } = useForm<ChangePwdInputs>();
 
-  const [updateUser, { data, error, isLoading, isError, isSuccess }] =
-    useUpdateUserMutation();
+  //update user mutation
+  const [updateUser, { data, error, loading: isLoading }] =
+    useMutation(UPDATE_USER);
+
   /**--------------------------------
    HANDLE PWD SUBMIT
  -------------------------------------*/
@@ -79,26 +83,29 @@ function ChangePwd({ user }: ChangePwdProps) {
 
       formData.append("password", password);
 
-      await updateUser({
-        userData: formData,
-        id: user.id,
+      updateUser({
+        variables: {
+          id: user._id,
+          password,
+          newPassword,
+        },
       });
     };
   };
 
   //feedback
   useEffect(() => {
-    if (isSuccess) {
+    if (data && !error && !isLoading) {
       resetPwd({ newPassword: "", confirmPassword: "" });
     }
 
     showToast({
-      message: error ? error : "Updated",
+      message: error?.message || "Updated",
       isLoading,
-      isSuccess,
-      isError,
+      isError: Boolean(error),
+      isSuccess: Boolean(data),
     });
-  }, [isSuccess, isError, isLoading]);
+  }, [data, error, isLoading]);
 
   //dialog props
   const dialogProps = {

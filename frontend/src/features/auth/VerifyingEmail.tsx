@@ -17,28 +17,28 @@ import ClearIcon from "@mui/icons-material/Clear";
 
 import { useDispatch, useSelector } from "react-redux";
 
-import { useConfirmEmailMutation } from "./authApiSlice";
+
+import { useMutation } from "@apollo/client";
+import { VERIFY_EMAIL } from "../../graphql/mutations/authMutations";
 
 const VerifyingEmail = () => {
   const navigate = useNavigate();
 
-  const dispatch = useDispatch();
+  const [verifyEmail, { data, error, loading: isLoading }] =
+    useMutation(VERIFY_EMAIL);
 
-  const [confirmEmail, { data, error, isLoading, isError, isSuccess }] =
-    useConfirmEmailMutation();
+  type TParams = { token: string };
 
-  const { token } = useParams();
+  const { token } = useParams<TParams>();
 
   useEffect(() => {
-    if (isSuccess || isError || isLoading) return;
+    if (data || error || isLoading) return;
 
-    const confirm = async () => {
-      await confirmEmail(token);
+    const confirm = () => {
+      verifyEmail({ variables: { verifyToken: token! } });
     };
     confirm();
   }, []);
-
-  console.log(isLoading, isError, isSuccess);
 
   return (
     <Box sx={{ display: "flex" }} justifyContent="center">
@@ -50,13 +50,13 @@ const VerifyingEmail = () => {
                 <CircularProgress size={45} color="inherit" thickness={2} />
               )}
 
-              {isSuccess && (
+              {data && (
                 <Avatar sx={{ width: 45, height: 45, bgcolor: "success.main" }}>
                   {" "}
                   <CheckIcon />{" "}
                 </Avatar>
               )}
-              {isError && (
+              {error && (
                 <Avatar sx={{ width: 45, height: 45, bgcolor: "error.main" }}>
                   {" "}
                   <ClearIcon />{" "}
@@ -67,11 +67,11 @@ const VerifyingEmail = () => {
         />
         <CardContent>
           <Typography gutterBottom paragraph mb={5} align="center">
-            {error || data?.message}
-            {isLoading && "Loading..."}
+            {error?.message || data?.verifyEmail.message}
+            {(isLoading as any) && "Loading..."}
           </Typography>
 
-          {isSuccess && (
+          {data && (
             <Button
               type="submit"
               size="large"

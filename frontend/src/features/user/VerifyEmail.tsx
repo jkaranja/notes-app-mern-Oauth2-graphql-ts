@@ -9,14 +9,16 @@ import jwtDecode, { JwtPayload } from "jwt-decode";
 
 import { useDispatch } from "react-redux";
 import showToast from "../../common/showToast";
-import { useResendVerifyEmailMutation } from "./userApiSlice";
+
+import { RESEND_VERIFY_EMAIL } from "../../graphql/mutations/userMutations";
+import { useMutation } from "@apollo/client";
 
 const VerifyEmail = () => {
   const navigate = useNavigate();
   const dispatch = useDispatch();
 
-  const [resendVerifyEmail, { data, error, isLoading, isError, isSuccess }] =
-    useResendVerifyEmailMutation();
+  const [resendVerifyEmail, { data, error, loading: isLoading }] =
+    useMutation(RESEND_VERIFY_EMAIL);
 
   type customJwtPayload = JwtPayload & { email: string };
 
@@ -45,12 +47,12 @@ const VerifyEmail = () => {
   //feedback
   useEffect(() => {
     showToast({
-      message: error || data?.message,
+      message: error?.message || data?.resendVerifyEmail?.message,
       isLoading,
-      isError,
-      isSuccess,
+      isError: Boolean(error),
+      isSuccess: Boolean(data),
     });
-  }, [isSuccess, isError, isLoading]);
+  }, [data, error, isLoading]);
 
   return (
     <Box sx={{ display: "flex" }} justifyContent="center">

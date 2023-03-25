@@ -31,29 +31,32 @@ import MenuIcon from "@mui/icons-material/Menu";
 import NotificationDrawer from "./NotificationDrawer";
 import MailOutlinedIcon from "@mui/icons-material/MailOutlined";
 
-import { useDispatch, useSelector } from "react-redux";
+
 import { useEffect } from "react";
-import { useSendLogoutMutation } from "../features/auth/authApiSlice";
+
 import showToast from "../common/showToast";
 import WalletIcon from "@mui/icons-material/Wallet";
-
+import { LOGOUT } from "../graphql/mutations/authMutations";
+import { useMutation } from "@apollo/client";
+import { useAppDispatch } from "../hooks/useAppDispatch";
+import { logOut } from "../features/auth/authSlice";
+import client from "../config/apolloClient";
 
 type DashHeaderProps = {
   handleSidebarToggle: () => void;
 };
 
-
-
 const DashHeader = ({ handleSidebarToggle }: DashHeaderProps) => {
   const [anchorEl, setAnchorEl] = React.useState<null | HTMLElement>(null);
   const [notificationOpen, setNotificationOpen] = React.useState(false);
 
-  const [sendLogout, { data, error, isLoading, isError, isSuccess }] =
-    useSendLogoutMutation();
+  //logout
+
+  const [logout, { data, error, loading: isLoading }] = useMutation(LOGOUT);
 
   const navigate = useNavigate();
 
-  const dispatch = useDispatch();
+  const dispatch = useAppDispatch();
 
   //for adding border bottom on scroll
   const matches = useScrollTrigger({
@@ -87,21 +90,30 @@ const DashHeader = ({ handleSidebarToggle }: DashHeaderProps) => {
   };
 
   //this calls logOut() to clear token in the store
-  const handleLogout = async () => {
-    await sendLogout();
+  const handleLogout = () => {
+    logout();
+    //or logout().then(() => client.clearStore());
   };
 
   //feedback
   useEffect(() => {
     showToast({
-      message: error || data?.message,
+      message: error?.message || data?.logout?.message,
       isLoading,
-      isError,
-      isSuccess,
+      isError: Boolean(error),
+      isSuccess: Boolean(data),
     });
+
     //redirect user to home on success
-    if (isSuccess) navigate("/");
-  }, [isSuccess, isError, isLoading]);
+    if (data && !error && !isLoading){
+      //clear token in the store
+      dispatch(logOut());
+      //clear graphql store
+      //client.resetStore()//cause the store to be cleared and all active queries to be refetched
+      client.clearStore();//clear store and don't refetch active queries
+      navigate("/");
+    } 
+  }, [data, error, isLoading]);
 
   return (
     <>

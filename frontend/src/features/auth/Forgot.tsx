@@ -38,14 +38,16 @@ import { useForm } from "react-hook-form";
 import useTitle from "../../hooks/useTitle";
 
 import { EMAIL_REGEX } from "../../constants/regex";
-import { useForgotPwdMutation } from "./authApiSlice";
+
 import showToast from "../../common/showToast";
+import { FORGOT_PASSWORD } from "../../graphql/mutations/authMutations";
+import { useMutation } from "@apollo/client";
 
 const Forgot = () => {
   useTitle("Forgot password");
 
-  const [forgotPwd, { data, error, isLoading, isError, isSuccess }] =
-    useForgotPwdMutation();
+  const [forgotPassword, { data, error, loading: isLoading }] =
+    useMutation(FORGOT_PASSWORD);
 
   type ForgotInputs = {
     email: string;
@@ -57,19 +59,19 @@ const Forgot = () => {
     formState: { errors },
   } = useForm<ForgotInputs>();
 
-  const onSubmit = async (inputs: ForgotInputs) => {
-    await forgotPwd(inputs);
+  const onSubmit =  (inputs: ForgotInputs) => {
+     forgotPassword({ variables: { email: inputs.email } });
   };
 
   //feedback
   useEffect(() => {
     showToast({
-      message: error || data?.message,
+      message: error?.message || data?.forgotPassword?.message,
       isLoading,
-      isError,
-      isSuccess,
+      isError: Boolean(error),
+      isSuccess: Boolean(data),
     });
-  }, [isSuccess, isError, isLoading]);
+  }, [data, error, isLoading]);
 
   return (
     <Box sx={{ display: "flex" }} justifyContent="center">

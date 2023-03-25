@@ -7,6 +7,7 @@ import Home from "./pages/Home";
 import { createTheme, ThemeProvider, useMediaQuery } from "@mui/material";
 import { purple } from "@mui/material/colors";
 
+
 import Features from "./pages/Features";
 import Pricing from "./pages/Pricing";
 import About from "./pages/About";
@@ -38,6 +39,9 @@ import Prefetch from "./features/auth/Prefetch";
 import { themeSettings } from "./theme";
 import OauthFailureRedirect from "./pages/OauthFailureRedirect";
 
+
+
+
 function App() {
 
 const prefersDarkMode = useMediaQuery("(prefers-color-scheme: dark)");
@@ -46,7 +50,9 @@ const theme = themeSettings(prefersDarkMode);
   
   
   return (
+  
     <ThemeProvider theme={theme}>
+      
       {/* //fluid sets width to 100% in BStrap//here maxWidth is used //default is maxWidth="md" not full width//
       //set maxWidth={false} to have 100% width// can also have sm - xl//not 100%// 
       //disableGutters removes px padding. 
@@ -110,6 +116,7 @@ const theme = themeSettings(prefersDarkMode);
         draggable
       />
     </ThemeProvider>
+  
   );
 }
 

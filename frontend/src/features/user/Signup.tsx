@@ -41,7 +41,7 @@ import { useDispatch, useSelector } from "react-redux";
 
 import useTitle from "../../hooks/useTitle";
 
-import { reset, selectUser } from "./userSlice";
+
 
 import { EMAIL_REGEX, PWD_REGEX } from "../../constants/regex";
 import {
@@ -50,8 +50,10 @@ import {
   GOOGLE_URL,
   LINKEDIN_URL,
 } from "../../config/urls";
-import { useRegisterUserMutation } from "./userApiSlice";
+
 import showToast from "../../common/showToast";
+import { useMutation } from "@apollo/client";
+import { REGISTER_USER } from "../../graphql/mutations/userMutations";
 
 const Signup = () => {
   useTitle("Sign up for free");
@@ -60,8 +62,11 @@ const Signup = () => {
 
   const dispatch = useDispatch();
 
-  const [registerUser, { data, error, isLoading, isError, isSuccess }] =
-    useRegisterUserMutation();
+  //data will be undefined if error
+  const [registerUser, { data, error, loading: isLoading }] =
+    useMutation(REGISTER_USER);
+
+    
 
   const [showPassword, setShowPassword] = React.useState(false);
 
@@ -90,20 +95,20 @@ const Signup = () => {
   } = useForm<SignUpInputs>();
 
   const onSubmit = async (inputs: SignUpInputs) => {
-    await registerUser(inputs);
+     registerUser({variables: inputs});
   };
 
-  if (isSuccess) navigate("/verify");
+  if (data && !isLoading) navigate("/verify");
 
   //feedback
   useEffect(() => {
     showToast({
-      message: error || data?.message,
+      message: error?.message || "Registered! ",
       isLoading,
-      isError,
-      isSuccess,
+      isError: Boolean(error),
+      isSuccess: Boolean(data),
     });
-  }, [isSuccess, isError, isLoading]);
+  }, [data, error, isLoading]);
 
   return (
     <Box sx={{ display: "flex" }} justifyContent="center">

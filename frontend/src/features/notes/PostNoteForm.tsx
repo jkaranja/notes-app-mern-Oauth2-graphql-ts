@@ -1,3 +1,4 @@
+import { useMutation } from "@apollo/client";
 import {
   Box,
   Button,
@@ -14,17 +15,16 @@ import { useSelector } from "react-redux";
 import showToast from "../../common/showToast";
 import DatePicker from "../../components/DatePicker";
 import Dropzone from "../../components/Dropzone";
-import { useAddNoteMutation } from "./notesApiSlice";
-import { selectNotes } from "./notesSlice";
+import { CREATE_NOTE } from "../../graphql/mutations/noteMutations";
+
+
 
 const PostNoteForm = ({}) => {
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
 
-  const { uploadProgress } = useSelector(selectNotes);
-
-  const [addNote, { data, error, isLoading, isError, isSuccess }] =
-    useAddNoteMutation();
+  const [createNewNote, { data, error, loading: isLoading }] =
+    useMutation(CREATE_NOTE);
 
   type PostNoteInputs = Record<string, string> & {
     title: string;
@@ -41,36 +41,32 @@ const PostNoteForm = ({}) => {
   ///submit note form //form.append('key', value of type: string | Blob)
   const onSubmitNote = async (inputs: PostNoteInputs) => {
     if (!selectedDate) return null;
-
-    const formData = new FormData();
-
-    selectedFiles.forEach((file, i) => {
-      formData.append("files", selectedFiles[i]);
+    createNewNote({
+      variables: {
+        content: inputs.content,
+        title: inputs.title,
+        deadline: selectedDate.toISOString(),
+        files: "",
+      },
     });
-
-    formData.append("deadline", selectedDate.toISOString());
-
-    Object.keys(inputs).forEach((field, i) => {
-      formData.append(field, inputs[field]);
-    });
-
-    await addNote(formData);
   };
 
-  ////feedback & reset form
+  console.log(error)
+
+  //feedback & reset form
   useEffect(() => {
-    if (isSuccess) {
+    if (data) {
       resetForm({ content: "", title: "" });
       setSelectedFiles([]);
     }
+
     showToast({
-      message: error || data?.message,
+      message: error?.message || "Note created!",
       isLoading,
-      isError,
-      isSuccess,
-      progress: uploadProgress,
+      isError: Boolean(error),
+      isSuccess: Boolean(data),
     });
-  }, [isSuccess, isError, isLoading, uploadProgress]);
+  }, [data, error, isLoading]);
 
   return (
     <Box>

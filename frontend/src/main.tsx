@@ -12,13 +12,22 @@ import "./styles/globals.css";
 import { disableReactDevTools } from "@fvilers/disable-react-devtools";
 import { Provider } from "react-redux";
 import store from "./app/store";
+import {
+  ApolloProvider,
+  ApolloClient,
+  InMemoryCache,
+  createHttpLink,
+} from "@apollo/client";
+import client from "./config/apolloClient";
 
 if (process.env.NODE_ENV === "production") disableReactDevTools();
 
 ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(
   <React.StrictMode>
     <Provider store={store}>
-      <App />
+      <ApolloProvider client={client}>
+        <App />
+      </ApolloProvider>
     </Provider>
   </React.StrictMode>
 );

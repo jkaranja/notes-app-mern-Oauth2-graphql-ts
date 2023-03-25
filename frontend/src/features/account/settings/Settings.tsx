@@ -48,6 +48,9 @@ import DeleteAccount from "./DeleteAccount";
 import EditProfile from "./EditProfile";
 import ChangePwd from "./ChangePwd";
 import TwoFactor from "./TwoFactor";
+import { GET_USER } from "../../../graphql/queries/userQueries";
+import { useQuery } from "@apollo/client";
+import { User } from "../../../types/user";
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -88,39 +91,43 @@ const MyTab = styled(Tab)(() => ({
 
 //profile component
 const Settings = () => {
-  const [tabValue, setTabValue] = useState(0);   
-   
+  const [tabValue, setTabValue] = useState(0);
+
+  const [user, setUser] = useState<User | null>(null);
+
   const dispatch = useDispatch();
   const navigate = useNavigate();
 
- const handleTabChange = (event: React.SyntheticEvent, tabValue: number) => {
-   setTabValue(tabValue);
- };
+  const handleTabChange = (event: React.SyntheticEvent, tabValue: number) => {
+    setTabValue(tabValue);
+  };
 
-
+  //fetch query
   const {
-    data: user,
-    isFetching,
-    isSuccess,
-    isError,
+    loading: isLoading,
     error,
-  } = useGetUserQuery(undefined, {
-    pollingInterval: 15000,
-    refetchOnFocus: true,
-    refetchOnMountOrArgChange: true,
+    data,
+  } = useQuery(GET_USER, {
+    fetchPolicy: "network-only", //fetch on mount//default is to not fetch if cache data exist
+    //nextFetchPolicy: "cache-first", //then use cache after mount
+    pollInterval: 15000, //15 secs
   });
 
   /**----------------------------------------
    SHOW TOASTS & RESET PWD FORM
  ---------------------------------------------*/
+  //feedback
   useEffect(() => {
+    //set user state
+    setUser(data?.user);
+    //toast
     showToast({
-      message: error,
-      isLoading: isFetching,
-      isSuccess,
-      isError,
+      message: error?.message,
+      isLoading,
+      isError: Boolean(error),
+      isSuccess: Boolean(data),
     });
-  }, [isSuccess, isError, isFetching]);
+  }, [data, error, isLoading]);
 
   return (
     <Box>
@@ -143,7 +150,6 @@ const Settings = () => {
                 <Typography pl={1}>Account</Typography>
               </Box>
             }
-            
           />
           <MyTab
             label={

@@ -15,10 +15,10 @@ import { useState } from "react";
 type NoteFilterProps = {
   open: boolean;
   handleClose: () => void;
-  toDate: string | Date;
-  fromDate: string | Date;
-  setToDate: React.Dispatch<React.SetStateAction<string | Date>>;
-  setFromDate: React.Dispatch<React.SetStateAction<string | Date>>;
+  endDate: string | Date;
+  startDate: string | Date;
+  setEndDate: React.Dispatch<React.SetStateAction<string | Date>>;
+  setStartDate: React.Dispatch<React.SetStateAction<string | Date>>;
   handleDateFilter: () => void;
   filterError: boolean;
   setFilterError: React.Dispatch<React.SetStateAction<boolean>>;
@@ -27,10 +27,10 @@ type NoteFilterProps = {
 export default function NoteFilter({
   open,
   handleClose,
-  toDate,
-  fromDate,
-  setToDate,
-  setFromDate,
+  endDate,
+  startDate,
+  setEndDate,
+  setStartDate,
   handleDateFilter,
   filterError,
   setFilterError,
@@ -42,11 +42,11 @@ export default function NoteFilter({
     setDateExpanded(false);
     setFilterError(false);
     //override date picker null with '', null is displayed & also sent as 'null' in query string to backend=true
-    if (toDate === null || fromDate === null) {
-      setToDate("");
-      setFromDate("");
+    if (endDate === null || startDate === null) {
+      setEndDate("");
+      setStartDate("");
     }
-  }, [toDate, fromDate]);
+  }, [endDate, startDate]);
 
   return (
     <Dialog
@@ -85,8 +85,8 @@ export default function NoteFilter({
               fullWidth
               showTimeSelect={false}
               dateFormat="dd/MM/yyyy"
-              selectedDate={fromDate}
-              setSelectedDate={setFromDate}
+              selectedDate={startDate}
+              setSelectedDate={setStartDate}
               filterDate={() => true}
             />
           </Grid>
@@ -102,8 +102,8 @@ export default function NoteFilter({
               fullWidth
               showTimeSelect={false}
               dateFormat="dd/MM/yyyy"
-              selectedDate={toDate}
-              setSelectedDate={setToDate}
+              selectedDate={endDate}
+              setSelectedDate={setEndDate}
               filterDate={() => true}
             />
           </Grid>

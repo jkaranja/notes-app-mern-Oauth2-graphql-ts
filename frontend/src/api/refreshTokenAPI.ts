@@ -1,26 +1,39 @@
-import axios from "axios";
 import { BASE_URL } from "../config/urls";
 
 import { setCredentials } from "../features/auth/authSlice";
 import store from "../app/store";
 
+import { ApolloClient, InMemoryCache, gql } from "@apollo/client";
+import { REFRESH_TOKEN } from "../graphql/queries/authQueries";
 
-const refreshTokenAPI = async () => {
-  const client = axios.create({
-    baseURL: BASE_URL,
-    withCredentials: true, //or add axios.defaults.withCredentials = true in app.js or top of file//for any req setting or sending cookies
-  });
-
+export const refreshTokenAPI = async () => {
   try {
+    const client = new ApolloClient({
+      uri: `${BASE_URL}/graphql`,
+      cache: new InMemoryCache(),
+      // Enable sending cookies over cross-origin requests
+      credentials: "include", //will work here since we are using uri instead of link option
+      defaultOptions: {
+        watchQuery: {
+          fetchPolicy: "network-only", // Doesn't check cache before making a network request//always get token from the server
+        },
+      },
+    });
+
+    const { data, loading, error } = await client.query({
+      query: REFRESH_TOKEN,
+      //variables: { ... },
+    });
+
     const {
-      data: { accessToken },
-    } = await client.get("/api/auth/refresh");
+      refresh: { accessToken },
+    } = data;
+    //update store with new token for subsequent queries
     store.dispatch(setCredentials(accessToken));
 
     return accessToken;
   } catch (error) {
-    //navigate to login
-    console.error("error");
+    console.error(error);
     return null;
   }
 };

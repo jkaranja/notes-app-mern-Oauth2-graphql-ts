@@ -55,8 +55,10 @@ import useDebounce from "../../hooks/useDebounce";
 
 import showToast from "../../common/showToast";
 import Grid2 from "@mui/material/Unstable_Grid2/Grid2";
-import { useGetNotesQuery } from "./notesApiSlice";
+
 import { IDateFilter, Note } from "../../types/note";
+import { GET_NOTES } from "../../graphql/queries/noteQueries";
+import { useQuery } from "@apollo/client";
 
 const NoteList = () => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -66,12 +68,12 @@ const NoteList = () => {
 
   const [noteList, setNoteList] = useState<Note[]>([]);
 
-  const [total, setTotal] = useState(0)//total docs found
+  const [total, setTotal] = useState(0); //total docs found
 
   //filter
   //note: set dates as '', dates are sent as GET query string so undefined or null will be sent as string = true
-  const [fromDate, setFromDate] = useState<string | Date>("");
-  const [toDate, setToDate] = useState<string | Date>("");
+  const [startDate, setStartDate] = useState<string | Date>("");
+  const [endDate, setEndDate] = useState<string | Date>("");
   const [searchTerm, setSearchTerm] = useState(searchParams.get("q") || "");
   const [filterError, setFilterError] = useState(false);
 
@@ -113,24 +115,44 @@ const NoteList = () => {
   /* -------------------------------------------------------------
    FETCH NOTES QUERY/RUNS ON MOUNT & WHEN ANY QUERY ARG CHANGES
    ----------------------------------------------------------------*/
+  // const {
+  //   currentData: data,
+  //   isFetching,
+  //   isSuccess,
+  //   isError,
+  //   error,
+  // } = useGetNotesQuery(
+  //   { currentPage, itemsPerPage, debouncedSearchTerm, dateFilter },
+  //   {
+  //     //pollingInterval: 15000,
+  //     //refetchOnFocus: true,
+  //     refetchOnMountOrArgChange: true,
+  //   }
+  // );
+
   const {
-    currentData: data,
-    isFetching,
-    isSuccess,
-    isError,
+    loading: isLoading,
+    data,
     error,
-  } = useGetNotesQuery(
-    { currentPage, itemsPerPage, debouncedSearchTerm, dateFilter },
-    {
-      //pollingInterval: 15000,
-      //refetchOnFocus: true,
-      refetchOnMountOrArgChange: true,
-    }
-  );
+    fetchMore,
+  } = useQuery(GET_NOTES, {
+    variables: {
+      page: currentPage,
+      size: itemsPerPage,
+      endDate: dateFilter.endDate,
+      startDate: dateFilter.startDate,
+      searchTerm: debouncedSearchTerm,
+    },
+    fetchPolicy: "network-only", //fetch on mount//default is to not fetch if cache data exist
+    //nextFetchPolicy: "cache-first", //then use cache after mount
+   // pollInterval: 15000, //15 secs
+    notifyOnNetworkStatusChange: true,//if using refetch or fetchMore to update loading and re-render 
+  });
+
   //store notes in a state to manipulate notes
   useEffect(() => {
-    setNoteList(data?.notes || []);
-    setTotal(data?.total || 0)
+    setNoteList(data?.notes?.notes || []);
+    setTotal(data?.notes?.total || 0);
   }, [data]);
 
   /* ----------------------------------------
@@ -146,7 +168,7 @@ const NoteList = () => {
   };
 
   useEffect(() => {
-    setTotalPages(data?.pages!);
+    setTotalPages(data?.notes.pages!);
   }, [data]);
 
   /* ----------------------------------------
@@ -169,11 +191,11 @@ const NoteList = () => {
    ----------------------------------------*/
   //on submit, set error if empty else set dateFilter to run useQuery//re-fetch
   const handleDateFilter = () => {
-    if (!fromDate && !toDate) {
+    if (!startDate && !endDate) {
       setFilterError(true);
       return null; //
     }
-    setDateFilter({ fromDate, toDate }); //runs useQuery again
+    setDateFilter({ startDate, endDate }); //runs useQuery again
     handleCloseD();
   };
 
@@ -181,16 +203,16 @@ const NoteList = () => {
    HANDLE CLEAR FILTERS
    ----------------------------------------*/
   const handleClearFilter = () => {
-    setFromDate("");
-    setToDate("");
-    setDateFilter({ fromDate: "", toDate: "" }); //runs useQuery again
+    setStartDate("");
+    setEndDate("");
+    setDateFilter({ startDate: "", endDate: "" }); //runs useQuery again
     setFilterError(false);
   };
   /* ----------------------------------------
    HANDLE CHECKED
    ----------------------------------------*/
   //single check
-  const handleChecked = (id: number) => {
+  const handleChecked = (id: string) => {
     const newData = noteList.map((note) => {
       if (note.noteId === id) {
         return { ...note, isChecked: note.isChecked ? !note.isChecked : true };
@@ -210,22 +232,23 @@ const NoteList = () => {
   };
 
   //feedback
+  //feedback
   useEffect(() => {
     showToast({
-      message: error,
-      isLoading: isFetching,
-      isError,
-      isSuccess,
+      message: error?.message,
+      isLoading,
+      isError: Boolean(error),
+      //isSuccess: Boolean(data),
     });
-  }, [isSuccess, isError, isFetching]);
+  }, [data, error, isLoading]);
 
   //dialog props
   const dialogProps = {
     open: openD,
-    toDate,
-    fromDate,
-    setToDate,
-    setFromDate,
+    endDate,
+    startDate,
+    setEndDate,
+    setStartDate,
     handleClickOpen: handleClickOpenD,
     handleClose: handleCloseD,
     handleDateFilter,
@@ -332,21 +355,21 @@ const NoteList = () => {
         >
           <Grid2 flexGrow={1}>
             <Typography px={1} pt={1} variant="body2">
-              <span style={{paddingRight: 3}}>{total} records</span>
-              {isFetching ? (
+              <span style={{ paddingRight: 3 }}>{total} records</span>
+              {isLoading ? (
                 <CircularProgress sx={{ color: "grey.dark" }} size={20} />
               ) : (
                 `${searchTerm && `matching term= '${searchTerm}',`} 
                 
                 ${
-                  fromDate &&
-                  `not older than = ${(fromDate as Date)?.toLocaleDateString?.(
+                  startDate &&
+                  `not older than = ${(startDate as Date)?.toLocaleDateString?.(
                     "en-GB"
                   )},`
                 }
                  ${
-                   toDate &&
-                   `older than = ${(toDate as Date)?.toLocaleDateString?.(
+                   endDate &&
+                   `older than = ${(endDate as Date)?.toLocaleDateString?.(
                      "en-GB"
                    )},`
                  }                
