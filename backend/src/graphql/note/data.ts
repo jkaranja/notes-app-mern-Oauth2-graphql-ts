@@ -5,7 +5,7 @@ import { GraphQLError } from "graphql";
 import mongoose from "mongoose";
 import { MyContext } from "../../types/context";
 import customGraphqlError from "../../utils/customErrors";
-import Note from "../auth/Note";
+import Note from "./Note";
 
 //filter regex
 //https://attacomsian.com/blog/mongoose-like-regex
