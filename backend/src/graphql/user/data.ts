@@ -32,7 +32,7 @@ const getUser = async ({ user }: MyContext) => {
   // errors in graphql server initialization/schema validation/context code is 500
   //resolvers errors return 200 OK errors or success
   if (!user) {
-     throw customGraphqlError({ code: "UNAUTHORIZED" });
+    throw customGraphqlError({ code: "UNAUTHORIZED" });
   }
 
   return user;
@@ -225,7 +225,7 @@ const updateUser = async (
   { user: userCtx }: MyContext
 ) => {
   if (!userCtx) {
-     throw customGraphqlError({ code: "UNAUTHORIZED" });
+    throw customGraphqlError({ code: "UNAUTHORIZED" });
   }
 
   const {
@@ -264,7 +264,7 @@ const updateUser = async (
   if (newPassword) user.password = await bcrypt.hash(newPassword, 10);
   if (username) user.username = username;
   if (phoneNumber) user.phoneNumber = phoneNumber;
-  if (phoneNumber) user.profileUrl = profileUrl;
+  if (profileUrl) user.profileUrl = profileUrl;
 
   //email changed
   if (email && user.email !== email) {
@@ -328,7 +328,7 @@ const updateUser = async (
  */
 const deleteUser = async (id: string, { res, user: userCtx }: MyContext) => {
   if (!userCtx) {
-     throw customGraphqlError({ code: "UNAUTHORIZED" });
+    throw customGraphqlError({ code: "UNAUTHORIZED" });
   }
   //check if id is a valid ObjectId//ObjectIds is constructed only from 24 hex character strings
   // if (!id.match(/^[0-9a-fA-F]{24}$/)) {
